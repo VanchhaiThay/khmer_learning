@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "721153410908",
+    "project_id": "khmerlearning-y4s1",
+    "storage_bucket": "khmerlearning-y4s1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721153410908:android:e03b44e310b06407426399",
+        "android_client_info": {
+          "package_name": "com.example.khmerlearning"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPVAcdFqL9_XAuT6RjmiZNZJI2hTk5DZ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
