@@ -113,7 +113,7 @@ class MessageScreen extends StatelessWidget {
         elevation: 0,
         title: const Text(
           "Messages",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
       ),

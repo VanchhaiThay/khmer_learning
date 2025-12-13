@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:khmerlearning/main.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,8 +13,10 @@ class ProfileScreen extends StatelessWidget {
     final userName = user?.displayName ?? "Student";
     final email = user?.email ?? "Not set";
 
+    bool isDarkMode = themeNotifier.value == ThemeMode.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xfff5f6fa),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: SingleChildScrollView(
@@ -40,12 +43,15 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
               Text(
                 userName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
                 ),
               ),
               const SizedBox(height: 8),
@@ -54,7 +60,12 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   Text(
                     "UID: ${userId.substring(0, 8)}",
-                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.black54,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
@@ -67,18 +78,48 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    child: const Icon(Icons.copy, size: 16, color: Colors.black54),
+                    child: Icon(
+                      Icons.copy,
+                      size: 16,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.black54,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 5),
               Text(
                 email,
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.black87,
+                ),
               ),
-              const SizedBox(height: 30),
-        
-              // Personal Info Card
+              const SizedBox(height: 10),
+              // Dark Mode Toggle Card
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                child: ListTile(
+                  leading: const Icon(Icons.dark_mode, color: Color(0xff6c5ce7)),
+                  title: const Text("Dark Mode"),
+                  trailing: Switch(
+                    value: isDarkMode,
+                    onChanged: (value) {
+                      themeNotifier.value =
+                          value ? ThemeMode.dark : ThemeMode.light;
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Personal Info Cards
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -91,7 +132,6 @@ class ProfileScreen extends StatelessWidget {
                   subtitle: Text(userName),
                 ),
               ),
-        
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -104,7 +144,6 @@ class ProfileScreen extends StatelessWidget {
                   subtitle: Text(email),
                 ),
               ),
-        
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -129,36 +168,26 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
               ),
-        
-              const SizedBox(height: 30),
               // Logout Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     try {
-                      await FirebaseAuth.instance.signOut(); // Sign out from Firebase
-                      // Navigate to LoginScreen and remove all previous routes
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('/login', (route) => false);
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Error logging out: $e"),
-                          duration: const Duration(seconds: 2),
-                        ),
+                        SnackBar(content: Text("Error logging out: $e")),
                       );
                     }
                   },
-                  icon: const Icon(
-                    Icons.logout,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.logout, color: Colors.white),
                   label: const Text(
                     "Logout",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                        fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 255, 37, 37),
@@ -166,7 +195,8 @@ class ProfileScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    textStyle: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

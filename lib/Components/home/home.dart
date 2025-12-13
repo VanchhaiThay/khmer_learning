@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:khmerlearning/Components/home/sub_nav/class_screen.dart';
 import 'package:khmerlearning/Components/home/sub_nav/message/message_screen.dart';
 import 'package:khmerlearning/Components/home/sub_nav/profile_screen.dart';
-import 'package:khmerlearning/Components/home/sub_nav/subject_screen.dart';
+import 'package:khmerlearning/Components/home/sub_nav/sub_home_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,17 +19,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Map<String, dynamic>> subjects = [
     {"title": "Khmer", "color": const Color(0xffffc98b), "image": "assets/images/khmer.png"},
-    {"title": "English", "color": const Color(0xffd9d9d9), "image": "assets/images/english.png"},
-    {"title": "History", "color": const Color(0xffbaff8b), "image": "assets/images/history.png"},
-    {"title": "Math", "color": const Color(0xffffff8b), "image": "assets/images/math.png"},
+    {"title": "English", "color": const Color.fromARGB(167, 230, 249, 89), "image": "assets/images/english.png"},
+    {"title": "Physic", "color": const Color.fromARGB(176, 185, 255, 139), "image": "assets/images/physic.png"},
+    {"title": "History", "color": const Color.fromARGB(255, 143, 164, 129), "image": "assets/images/history.png"},
+    {"title": "Math", "color": const Color.fromARGB(191, 255, 255, 139), "image": "assets/images/math.png"},
+    {"title": "Bio", "color": const Color.fromARGB(255, 247, 164, 31), "image": "assets/images/biology.png"},
     {"title": "Science", "color": const Color(0xffa8d5ff), "image": "assets/images/science.png"},
     {"title": "Geography", "color": const Color(0xffffa8a8), "image": "assets/images/geography.png"},
-    {"title": "Art", "color": const Color(0xffffe08b), "image": "assets/images/art.png"},
-    {"title": "Music", "color": const Color(0xffc8ff8b), "image": "assets/images/music.png"},
+    {"title": "Chemistry", "color": const Color(0xffd9a8ff), "image": "assets/images/chemistry.png"},
+    {"title": "Technology", "color": const Color.fromARGB(255, 228, 106, 191), "image": "assets/images/technology.png"},
   ];
 
   final List<Widget> pages = [
-    const SubjectScreen(),
+    const SubHomeScreen(),
     const ClassScreen(),
     const MessageScreen(),
     const ProfileScreen(),
@@ -44,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final userId = user?.uid.substring(0, 8) ?? "N/A";
+    final userId = user?.uid ?? "N/A"; // <-- use full UID
     final userName = user?.displayName ?? "Student";
 
     return Scaffold(
@@ -55,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xffbfeaff),
+          color: const Color.fromARGB(255, 76, 115, 183),
           borderRadius: BorderRadius.circular(40),
         ),
         child: Row(
@@ -63,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _BottomNavItem(
               icon: Icons.book,
-              label: "Subject",
+              label: "Home",
               isActive: selectedIndex == 0,
               onTap: () => onTabTapped(0),
             ),
@@ -92,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeBody(String userId, String userName) {
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -101,15 +104,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // ================= TOP PROFILE CARD =================
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: const Color.fromARGB(202, 119, 0, 215),
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(50),
             ),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 28,
+                  radius: 25,
                   backgroundColor: Colors.white,
                   backgroundImage: NetworkImage(
                     "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId",
@@ -129,15 +132,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "UID : $userId",
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white70,
+                          "UID: ${userId.substring(0, 8)}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black54,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () {
                             Clipboard.setData(ClipboardData(text: userId));
@@ -148,10 +154,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             );
                           },
-                          child: const Icon(
+                          child: Icon(
                             Icons.copy,
                             size: 16,
-                            color: Colors.white70,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : Colors.black54,
                           ),
                         ),
                       ],
@@ -191,21 +199,26 @@ class _HomeScreenState extends State<HomeScreen> {
               GestureDetector(
                 onTap: () {
                   setState(() {
-                    showAllSubjects = !showAllSubjects;
+                    showAllSubjects = !showAllSubjects; // toggle expand/collapse
                   });
                 },
                 child: Row(
                   children: [
                     Text(
                       showAllSubjects ? "see less" : "see more",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Colors.black54,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black54, // White in dark mode, black54 in light mode
                       ),
                     ),
                     Icon(
                       showAllSubjects ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
                       size: 20,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black54,
                     ),
                   ],
                 ),

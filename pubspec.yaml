@@ -69,6 +69,12 @@ flutter:
     - assets/images/english.png
     - assets/images/history.png
     - assets/images/math.png
+    - assets/images/biology.png
+    - assets/images/physic.png
+    - assets/images/science.png
+    - assets/images/technology.png
+    - assets/images/chemistry.png
+    - assets/images/geography.png
 
   #   - images/a_dot_ham.jpeg
 
