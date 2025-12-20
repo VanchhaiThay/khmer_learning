@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:khmerlearning/Components/auth/login/login.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -30,16 +32,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // ✅ Save First & Last Name to Firebase user profile
-      await userCredential.user!.updateDisplayName(
+      final user = userCredential.user!;
+
+      // Update display name in Firebase Auth
+      await user.updateDisplayName(
         "${_firstNameController.text.trim()} ${_lastNameController.text.trim()}",
       );
+
+      // Save user data to Firestore
+      await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+        "uid": user.uid,
+        "first_name": _firstNameController.text.trim(),
+        "last_name": _lastNameController.text.trim(),
+        "email": _emailController.text.trim(),
+        "created_at": FieldValue.serverTimestamp(),
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Account created successfully!")),
       );
 
-      Navigator.pop(context); // Go back to Login
+      // ✅ Go to Login screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     } on FirebaseAuthException catch (e) {
       String message = "Something went wrong";
 
@@ -89,12 +106,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     const Text(
                       "Sign Up",
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                     ),
-      
                     const SizedBox(height: 15),
-      
-                    // ✅ First & Last Name
+
+                    // First & Last Name
                     Row(
                       children: [
                         Expanded(
@@ -126,9 +143,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ],
                     ),
-      
                     const SizedBox(height: 15),
-      
+
                     // Email
                     TextFormField(
                       controller: _emailController,
@@ -146,9 +162,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-      
                     const SizedBox(height: 10),
-      
+
                     // Password
                     TextFormField(
                       controller: _passwordController,
@@ -167,28 +182,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-      
                     const SizedBox(height: 15),
-      
+
                     // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _loading ? null : _signUp,
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
                             : const Text("Sign Up"),
                       ),
                     ),
-      
                     const SizedBox(height: 10),
-      
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text("Already have an account?"),
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const LoginScreen()),
+                          ),
                           child: const Text("Login"),
                         ),
                       ],

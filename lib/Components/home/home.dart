@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 25,
+                  radius: 30,
                   backgroundColor: Colors.white,
                   backgroundImage: NetworkImage(
                     "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId",
