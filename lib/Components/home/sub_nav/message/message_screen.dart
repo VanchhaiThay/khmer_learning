@@ -3,6 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 
+import 'widget/add_friend_dialog.dart';
+import 'widget/chat_screen.dart';
+import 'widget/create_group_dialog.dart';
+import 'widget/group_chat_screen.dart';
+
 class MessageScreen extends StatefulWidget {
   const MessageScreen({super.key});
 
@@ -14,127 +19,16 @@ class _MessageScreenState extends State<MessageScreen> {
   final currentUser = FirebaseAuth.instance.currentUser!;
 
   void _showAddFriendDialog() {
-    final uidController = TextEditingController();
-
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    "Add Friend",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: uidController,
-                    decoration: const InputDecoration(
-                      labelText: "Friend's UID",
-                      prefixIcon: Icon(Icons.fingerprint),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final friendUid = uidController.text.trim();
-                          if (friendUid.isEmpty) return;
-                          if (friendUid == currentUser.uid) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("You cannot add yourself"),
-                              ),
-                            );
-                            return;
-                          }
+      builder: (_) => AddFriendDialog(currentUser: currentUser),
+    );
+  }
 
-                          final friendDoc =
-                              await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(friendUid)
-                                  .get();
-                          if (!friendDoc.exists) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("User UID not found"),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final friendData = friendDoc.data()!;
-                          final firstName = friendData['first_name'] ?? '';
-                          final lastName = friendData['last_name'] ?? '';
-
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(currentUser.uid)
-                              .collection('friends')
-                              .doc(friendUid)
-                              .set({
-                                'uid': friendUid,
-                                'firstName': firstName,
-                                'lastName': lastName,
-                                'addedAt': FieldValue.serverTimestamp(),
-                              });
-
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(friendUid)
-                              .collection('friends')
-                              .doc(currentUser.uid)
-                              .set({
-                                'uid': currentUser.uid,
-                                'firstName':
-                                    currentUser.displayName?.split(' ').first ??
-                                    '',
-                                'lastName':
-                                    currentUser.displayName?.split(' ').last ??
-                                    '',
-                                'addedAt': FieldValue.serverTimestamp(),
-                              });
-
-                          final chatIdList = [currentUser.uid, friendUid]
-                            ..sort();
-                          final chatDocId = chatIdList.join('_');
-                          final chatDocRef = FirebaseFirestore.instance
-                              .collection('chats')
-                              .doc(chatDocId);
-                          if (!(await chatDocRef.get()).exists) {
-                            await chatDocRef.set({'users': chatIdList});
-                          }
-
-                          Navigator.pop(context);
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Friend added successfully"),
-                            ),
-                          );
-                        },
-                        child: const Text("Add"),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+  void _showCreateGroupDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => const CreateGroupDialog(),
     );
   }
 
@@ -142,10 +36,27 @@ class _MessageScreenState extends State<MessageScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (_) => ChatScreen(friendUid: friendUid, friendName: friendName),
+        builder: (_) =>
+            ChatScreen(friendUid: friendUid, friendName: friendName),
       ),
     );
+  }
+
+  void _openGroupChat(String groupId, String groupName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            GroupChatScreen(groupId: groupId, groupName: groupName),
+      ),
+    );
+  }
+
+  /// Helper for chat ID (consistent for private chats)
+  String getChatId(String user1, String user2) {
+    return user1.hashCode <= user2.hashCode
+        ? '$user1\_$user2'
+        : '$user2\_$user1';
   }
 
   @override
@@ -166,71 +77,46 @@ class _MessageScreenState extends State<MessageScreen> {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(color: const Color(0xff6c5ce7)),
-              margin: EdgeInsets.zero,
-              padding: const EdgeInsets.all(0),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage: NetworkImage(
-                        "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId",
-                      ),
+              decoration: const BoxDecoration(color: Color(0xff6c5ce7)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundImage: NetworkImage(
+                      "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId",
                     ),
-                    Text(
-                      userName,
-                      textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(userName,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
+                  Text(email,
+                      style: const TextStyle(color: Colors.white70)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SelectableText(
+                        userId,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                       ),
-                    ),
-                    Text(
-                      email,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: SelectableText(
-                            userId,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                            maxLines: 1,
-                            showCursor: false,
-                            toolbarOptions: const ToolbarOptions(
-                              copy: true,
-                              selectAll: true,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.copy,
-                            color: Colors.white70,
-                            size: 18,
-                          ),
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: userId));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('UID copied to clipboard'),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      IconButton(
+                        icon: const Icon(Icons.copy,
+                            size: 18, color: Colors.white70),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: userId));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text("UID copied to clipboard")),
+                          );
+                        },
+                      )
+                    ],
+                  )
+                ],
               ),
             ),
             ListTile(
@@ -242,300 +128,153 @@ class _MessageScreenState extends State<MessageScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.group_add),
+              title: const Text("Create Group"),
+              onTap: () {
+                Navigator.pop(context);
+                _showCreateGroupDialog();
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.logout),
               title: const Text("Logout"),
               onTap: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/login', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/login', (_) => false);
               },
             ),
           ],
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
+
+      /// BODY
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+
+          /// ===== GROUPS =====
+          const Text("Groups",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('groups')
+                .where('members', arrayContains: userId)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.data!.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text("No groups"),
+                );
+              }
+
+              return Column(
+                children: snapshot.data!.docs.map((group) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('group_chats')
+                        .doc(group.id)
+                        .collection('messages')
+                        .orderBy('timestamp', descending: true)
+                        .limit(1)
+                        .snapshots(),
+                    builder: (context, messageSnapshot) {
+                      String lastMessage = "";
+                      if (messageSnapshot.hasData &&
+                          messageSnapshot.data!.docs.isNotEmpty) {
+                        lastMessage =
+                            messageSnapshot.data!.docs.first['text'] ?? '';
+                      }
+
+                      return Card(
+                        child: ListTile(
+                          leading:
+                              const CircleAvatar(child: Icon(Icons.group)),
+                          title: Text(group['name']),
+                          subtitle: Text(
+                              lastMessage.isNotEmpty ? lastMessage : "Group chat"),
+                          onTap: () =>
+                              _openGroupChat(group.id, group['name']),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          /// ===== FRIENDS =====
+          const Text("Friends",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
                 .collection('users')
                 .doc(userId)
                 .collection('friends')
                 .orderBy('addedAt', descending: true)
                 .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData)
-            return const Center(child: CircularProgressIndicator());
-          final friends = snapshot.data!.docs;
-          if (friends.isEmpty)
-            return const Center(child: Text("No friends. Add some!"));
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: friends.length,
-            itemBuilder: (context, index) {
-              final friend = friends[index];
-              final friendName = "${friend['firstName']} ${friend['lastName']}";
-              final friendUid = friend['uid'];
+              if (snapshot.data!.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text("No friends yet"),
+                );
+              }
 
-              final chatIdList = [userId, friendUid]..sort();
-              final chatDocId = chatIdList.join('_');
+              return Column(
+                children: snapshot.data!.docs.map((friend) {
+                  final friendUid = friend['uid'];
+                  final friendName =
+                      "${friend['firstName']} ${friend['lastName']}";
 
-              return FutureBuilder<QuerySnapshot>(
-                future:
-                    FirebaseFirestore.instance
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
                         .collection('chats')
-                        .doc(chatDocId)
+                        .doc(getChatId(userId, friendUid))
                         .collection('messages')
                         .orderBy('timestamp', descending: true)
                         .limit(1)
-                        .get(),
-                builder: (context, chatSnapshot) {
-                  String lastMessage = "";
-                  if (chatSnapshot.hasData &&
-                      chatSnapshot.data!.docs.isNotEmpty) {
-                    lastMessage = chatSnapshot.data!.docs.first['text'];
-                  }
+                        .snapshots(),
+                    builder: (context, chatSnapshot) {
+                      String lastMessage = "";
+                      if (chatSnapshot.hasData &&
+                          chatSnapshot.data!.docs.isNotEmpty) {
+                        lastMessage =
+                            chatSnapshot.data!.docs.first['text'] ?? '';
+                      }
 
-                  return Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: NetworkImage(
-                          "https://api.dicebear.com/7.x/fun-emoji/png?seed=$friendUid",
+                      return Card(
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: NetworkImage(
+                              "https://api.dicebear.com/7.x/fun-emoji/png?seed=$friendUid",
+                            ),
+                          ),
+                          title: Text(friendName),
+                          subtitle: Text(
+                              lastMessage.isNotEmpty ? lastMessage : "Tap to chat"),
+                          trailing: const Icon(Icons.chat,
+                              color: Color(0xff6c5ce7)),
+                          onTap: () => _openChat(friendUid, friendName),
                         ),
-                      ),
-                      title: Text(
-                        friendName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        lastMessage.isEmpty ? "No messages yet" : lastMessage,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: const Icon(
-                        Icons.chat,
-                        color: Color(0xff6c5ce7),
-                      ),
-                      onTap: () => _openChat(friendUid, friendName),
-                    ),
+                      );
+                    },
                   );
-                },
+                }).toList(),
               );
             },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class ChatScreen extends StatefulWidget {
-  final String friendUid;
-  final String friendName;
-  const ChatScreen({
-    super.key,
-    required this.friendUid,
-    required this.friendName,
-  });
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final currentUser = FirebaseAuth.instance.currentUser!;
-  late String chatDocId;
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    final uids = [currentUser.uid, widget.friendUid]..sort();
-    chatDocId = uids.join('_');
-  }
-
-  void sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-
-    FirebaseFirestore.instance
-        .collection('chats')
-        .doc(chatDocId)
-        .collection('messages')
-        .add({
-          'senderUid': currentUser.uid,
-          'text': text,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-    _messageController.clear();
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent + 80,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
-
-  Widget _buildMessage(Map<String, dynamic> msg) {
-    final isMe = msg['senderUid'] == currentUser.uid;
-    final bgColor = isMe ? Colors.deepPurpleAccent : Colors.grey[300];
-    final textColor = isMe ? Colors.white : Colors.black87;
-
-    Timestamp? timestamp = msg['timestamp'];
-    String time = "";
-    if (timestamp != null) {
-      final dt = timestamp.toDate();
-      time =
-          "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          if (!isMe)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundImage: NetworkImage(
-                  "https://api.dicebear.com/7.x/fun-emoji/png?seed=${msg['senderUid']}",
-                ),
-              ),
-            ),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 0),
-                  bottomRight: Radius.circular(isMe ? 0 : 16),
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 3,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    msg['text'],
-                    style: TextStyle(color: textColor, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      color: textColor.withOpacity(0.7),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isMe) const SizedBox(width: 8),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.friendName,
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: const Color.fromARGB(255, 0, 134, 201),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection('chats')
-                      .doc(chatDocId)
-                      .collection('messages')
-                      .orderBy('timestamp')
-                      .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData)
-                  return const Center(child: CircularProgressIndicator());
-                final messages =
-                    snapshot.data!.docs
-                        .map((doc) => doc.data() as Map<String, dynamic>)
-                        .toList();
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(12),
-                  itemCount: messages.length,
-                  itemBuilder:
-                      (context, index) => _buildMessage(messages[index]),
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: const Color.fromARGB(255, 224, 224, 224),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 255, 255, 255),
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 3,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      cursorColor: Colors.white,
-                      decoration: const InputDecoration(
-                        hintText: "Type a message...",
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: const Color(0xff6c5ce7),
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: sendMessage,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: selectedIndex == 0 ? _buildHomeBody(userId, userName) : pages[selectedIndex],
-
+      backgroundColor: const Color.fromARGB(255, 165, 201, 255),
       // ================= BOTTOM NAV BAR =================
       bottomNavigationBar: Container(
         margin: const EdgeInsets.all(16),
@@ -94,7 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeBody(String userId, String userName) {
-    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
