@@ -1,86 +1,139 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:khmerlearning/Components/auth/login/login.dart';
+import 'package:khmerlearning/Components/survey/survey.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
-
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
-
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  final PageController _pageController = PageController();
+  late PageController _pageController;
+  late Timer _timer;
+
   int currentIndex = 0;
 
   final List<String> images = [
-    "assets/images/img_welcome1.avif",
-    "assets/images/img_welcome2.avif",
-    "assets/images/img_welcome3.avif",
+    "assets/images/welcome1.png",
+    "assets/images/welcome2.png",
+    "assets/images/welcome3.png",
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    _pageController = PageController(viewportFraction: 0.7);
+
+    // ✅ AUTO SCROLL
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!_pageController.hasClients) return;
+
+      if (currentIndex < images.length - 1) {
+        currentIndex++;
+      } else {
+        currentIndex = 0;
+      }
+
+      _pageController.animateToPage(
+        currentIndex,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    const double height = 250;
+    const double width = 230;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: Container(
           width: 580,
           height: 760,
-          decoration: BoxDecoration(
-            color: Colors.white,
-          ),
+          color: Colors.white,
           child: Column(
             children: [
-              // ---------------- GREEN CURVE HEADER ----------------
+              // HEADER
               Container(
                 height: 110,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.green,
                   borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(200),
-                    bottomRight: Radius.circular(200),
+                    bottomLeft: Radius.circular(150),
+                    bottomRight: Radius.circular(150),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 80),
+              const SizedBox(height: 60),
 
-              // ---------------- IMAGE SLIDER ----------------
+              // AUTO SCROLL IMAGES
               SizedBox(
-                height: 250,
-                width: 230,
+                height: height,
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: images.length,
                   onPageChanged: (index) {
-                    setState(() {
-                      currentIndex = index;
-                    });
+                    setState(() => currentIndex = index);
                   },
                   itemBuilder: (context, index) {
-                    return Image.asset(
-                      images[index],
-                      fit: BoxFit.cover,
+                    return AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, child) {
+                        double scale = 1.0;
+                        if (_pageController.position.haveDimensions) {
+                          scale =
+                              (_pageController.page! - index).abs();
+                          scale = (1 - scale * 0.25).clamp(0.8, 1.0);
+                        }
+
+                        return Center(
+                          child: Transform.scale(
+                            scale: scale,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                images[index],
+                                height: height,
+                                width: width,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // ---------------- DOT INDICATOR ----------------
+              // DOT INDICATOR
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(images.length, (index) {
-                  return Container(
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 5),
-                    width: 10,
-                    height: 10,
+                    width: currentIndex == index ? 14 : 10,
+                    height: currentIndex == index ? 14 : 10,
                     decoration: BoxDecoration(
                       color: currentIndex == index
-                          ? Colors.black
-                          : Colors.black26,
+                          ? Colors.green
+                          : Colors.green[100],
                       shape: BoxShape.circle,
                     ),
                   );
@@ -89,7 +142,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
               const SizedBox(height: 20),
 
-              // ---------------- TITLE ----------------
               const Text(
                 "Welcome to class",
                 style: TextStyle(
@@ -101,37 +153,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
               const SizedBox(height: 5),
 
-              // ---------------- SUBTITLE ----------------
               const Text(
                 "We can Improve and teach you",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
 
               const SizedBox(height: 30),
 
-              // ---------------- BUTTON ----------------
+              // NEXT BUTTON
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xffd7b167),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 12,
-                  ),
+                      horizontal: 40, vertical: 12),
                 ),
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const SurveyScreen(),
+                    ),
                   );
                 },
                 child: const Text(
-                  "Get Start",
+                  "Next",
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.black,

@@ -1,3 +1,4 @@
+import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,18 +27,14 @@ class _MessageScreenState extends State<MessageScreen> {
   }
 
   void _showCreateGroupDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => const CreateGroupDialog(),
-    );
+    showDialog(context: context, builder: (_) => const CreateGroupDialog());
   }
 
   void _openChat(String friendUid, String friendName) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            ChatScreen(friendUid: friendUid, friendName: friendName),
+        builder: (_) => ChatScreen(friendUid: friendUid, friendName: friendName),
       ),
     );
   }
@@ -46,31 +43,110 @@ class _MessageScreenState extends State<MessageScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            GroupChatScreen(groupId: groupId, groupName: groupName),
+        builder: (_) => GroupChatScreen(groupId: groupId, groupName: groupName),
       ),
     );
   }
 
-  /// Helper for chat ID (consistent for private chats)
   String getChatId(String user1, String user2) {
-    return user1.hashCode <= user2.hashCode
-        ? '$user1\_$user2'
-        : '$user2\_$user1';
+    final uids = [user1, user2]..sort();
+    return uids.join('_');
+  }
+
+  Stream<List<Map<String, dynamic>>> combinedChatStream(String userId) async* {
+    final friendStream =
+        FirebaseFirestore.instance.collection('users').doc(userId).collection('friends').snapshots();
+    final groupStream =
+        FirebaseFirestore.instance.collection('groups').where('members', arrayContains: userId).snapshots();
+
+    await for (final combined in StreamZip([friendStream, groupStream])) {
+      final friendDocs = combined[0].docs;
+      final groupDocs = combined[1].docs;
+
+      List<Map<String, dynamic>> allChats = [];
+
+      // Groups
+      for (var group in groupDocs) {
+        final msgStream = FirebaseFirestore.instance
+            .collection('groups')
+            .doc(group.id)
+            .collection('messages')
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .snapshots();
+
+        final msgSnapshot = await msgStream.first;
+        Timestamp? lastTime;
+        String lastText = "No messages yet";
+
+        if (msgSnapshot.docs.isNotEmpty) {
+          lastText = msgSnapshot.docs.first['text'] ?? '';
+          lastTime = msgSnapshot.docs.first['timestamp'] as Timestamp?;
+        }
+
+        allChats.add({
+          'type': 'group',
+          'id': group.id,
+          'name': group['name'],
+          'lastMessage': lastText,
+          'timestamp': lastTime ?? Timestamp.fromDate(DateTime(2000)),
+        });
+      }
+
+      // Friends
+      for (var friend in friendDocs) {
+        final friendUid = friend['uid'];
+        final friendName = "${friend['firstName']} ${friend['lastName']}";
+
+        final msgStream = FirebaseFirestore.instance
+            .collection('chats')
+            .doc(getChatId(userId, friendUid))
+            .collection('messages')
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .snapshots();
+
+        final msgSnapshot = await msgStream.first;
+        Timestamp? lastTime;
+        String lastText = "Tap to chat";
+
+        if (msgSnapshot.docs.isNotEmpty) {
+          lastText = msgSnapshot.docs.first['text'] ?? '';
+          lastTime = msgSnapshot.docs.first['timestamp'] as Timestamp?;
+        }
+
+        allChats.add({
+          'type': 'friend',
+          'id': friendUid,
+          'name': friendName,
+          'lastMessage': lastText,
+          'timestamp': lastTime ?? Timestamp.fromDate(DateTime(2000)),
+        });
+      }
+
+      allChats.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+      yield allChats;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final userId = currentUser.uid;
     final userName = currentUser.displayName ?? "Student";
-    final email = currentUser.email ?? "No email";
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final backgroundColor = isDarkMode ? Colors.black : const Color(0xfff0f2f5);
+    final cardColor = isDarkMode ? Colors.grey.shade900 : Colors.white;
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
 
     return Scaffold(
-      backgroundColor: const Color(0xfff0f2f5),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: const Color(0xff6c5ce7),
         title: const Text("Messages"),
         centerTitle: true,
+        elevation: 4,
       ),
       drawer: Drawer(
         child: ListView(
@@ -84,38 +160,36 @@ class _MessageScreenState extends State<MessageScreen> {
                   CircleAvatar(
                     radius: 30,
                     backgroundImage: NetworkImage(
-                      "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId",
-                    ),
+                        "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId"),
                   ),
-                  const SizedBox(height: 8),
-                  Text(userName,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
-                  Text(email,
-                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 12),
+                  Text(
+                    userName,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SelectableText(
-                        userId,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
+                      Expanded(
+                        child: SelectableText(
+                          userId,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          maxLines: 1,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.copy,
-                            size: 18, color: Colors.white70),
+                        icon: const Icon(Icons.copy, size: 18, color: Colors.white70),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: userId));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("UID copied to clipboard")),
+                            const SnackBar(content: Text("UID copied to clipboard")),
                           );
                         },
                       )
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -140,143 +214,65 @@ class _MessageScreenState extends State<MessageScreen> {
               title: const Text("Logout"),
               onTap: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.pushNamedAndRemoveUntil(
-                    context, '/login', (_) => false);
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
               },
             ),
           ],
         ),
       ),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: combinedChatStream(userId),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      /// BODY
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
+          final chats = snapshot.data!;
+          if (chats.isEmpty) {
+            return Center(
+              child: Text(
+                "No chats yet",
+                style: TextStyle(color: subTextColor, fontSize: 16),
+              ),
+            );
+          }
 
-          /// ===== GROUPS =====
-          const Text("Groups",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('groups')
-                .where('members', arrayContains: userId)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.data!.docs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text("No groups"),
-                );
-              }
-
-              return Column(
-                children: snapshot.data!.docs.map((group) {
-                  return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('group_chats')
-                        .doc(group.id)
-                        .collection('messages')
-                        .orderBy('timestamp', descending: true)
-                        .limit(1)
-                        .snapshots(),
-                    builder: (context, messageSnapshot) {
-                      String lastMessage = "";
-                      if (messageSnapshot.hasData &&
-                          messageSnapshot.data!.docs.isNotEmpty) {
-                        lastMessage =
-                            messageSnapshot.data!.docs.first['text'] ?? '';
-                      }
-
-                      return Card(
-                        child: ListTile(
-                          leading:
-                              const CircleAvatar(child: Icon(Icons.group)),
-                          title: Text(group['name']),
-                          subtitle: Text(
-                              lastMessage.isNotEmpty ? lastMessage : "Group chat"),
-                          onTap: () =>
-                              _openGroupChat(group.id, group['name']),
-                        ),
-                      );
-                    },
-                  );
-                }).toList(),
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: chats.length,
+            itemBuilder: (context, index) {
+              final chat = chats[index];
+              return Card(
+                color: cardColor,
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    radius: 26,
+                    backgroundImage: NetworkImage(
+                      chat['type'] == 'friend'
+                          ? "https://api.dicebear.com/7.x/fun-emoji/png?seed=${chat['id']}"
+                          : "https://ui-avatars.com/api/?name=${Uri.encodeComponent(chat['name'])}&background=6c5ce7&color=fff&size=128",
+                    ),
+                  ),
+                  title: Text(chat['name'], style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                  subtitle: Text(chat['lastMessage'], style: TextStyle(color: subTextColor)),
+                  trailing: chat['type'] == 'friend'
+                      ? const Icon(Icons.chat, color: Color(0xff6c5ce7))
+                      : null,
+                  onTap: () {
+                    if (chat['type'] == 'friend') {
+                      _openChat(chat['id'], chat['name']);
+                    } else {
+                      _openGroupChat(chat['id'], chat['name']);
+                    }
+                  },
+                ),
               );
             },
-          ),
-
-          const SizedBox(height: 20),
-
-          /// ===== FRIENDS =====
-          const Text("Friends",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(userId)
-                .collection('friends')
-                .orderBy('addedAt', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.data!.docs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text("No friends yet"),
-                );
-              }
-
-              return Column(
-                children: snapshot.data!.docs.map((friend) {
-                  final friendUid = friend['uid'];
-                  final friendName =
-                      "${friend['firstName']} ${friend['lastName']}";
-
-                  return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('chats')
-                        .doc(getChatId(userId, friendUid))
-                        .collection('messages')
-                        .orderBy('timestamp', descending: true)
-                        .limit(1)
-                        .snapshots(),
-                    builder: (context, chatSnapshot) {
-                      String lastMessage = "";
-                      if (chatSnapshot.hasData &&
-                          chatSnapshot.data!.docs.isNotEmpty) {
-                        lastMessage =
-                            chatSnapshot.data!.docs.first['text'] ?? '';
-                      }
-
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: NetworkImage(
-                              "https://api.dicebear.com/7.x/fun-emoji/png?seed=$friendUid",
-                            ),
-                          ),
-                          title: Text(friendName),
-                          subtitle: Text(
-                              lastMessage.isNotEmpty ? lastMessage : "Tap to chat"),
-                          trailing: const Icon(Icons.chat,
-                              color: Color(0xff6c5ce7)),
-                          onTap: () => _openChat(friendUid, friendName),
-                        ),
-                      );
-                    },
-                  );
-                }).toList(),
-              );
-            },
-          ),
-        ],
+          );
+        },
       ),
     );
   }

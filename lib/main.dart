@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:khmerlearning/Components/auth/login/login.dart';
-import 'package:khmerlearning/Components/auth/signup/signup.dart' show SignUpScreen;
+import 'package:khmerlearning/Components/auth/signup/signup.dart';
 import 'package:khmerlearning/Components/home/home.dart';
 import 'package:khmerlearning/Components/home/sub_nav/profile_screen.dart';
+import 'package:khmerlearning/Components/welcome/welcome.dart'; // <- import WelcomeScreen
 import 'firebase_options.dart';
 
 void main() async {
@@ -12,7 +13,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await Firebase.initializeApp(); 
+
   runApp(const MyApp());
 }
 
@@ -30,10 +31,13 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Flutter Demo',
-          theme: ThemeData.light(), // Light theme for default
-          darkTheme: ThemeData.dark(), // Dark theme for app
-          themeMode: currentMode, // Use the notifier
-          initialRoute: FirebaseAuth.instance.currentUser != null ? '/home' : '/login',
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          themeMode: currentMode,
+          // Decide the initial screen
+          home: FirebaseAuth.instance.currentUser != null
+              ? const HomeScreen()       // User already logged in
+              : const WelcomeScreen(),  // User not logged in
           routes: {
             '/login': (_) => const LoginScreen(),
             '/signup': (_) => const SignUpScreen(),

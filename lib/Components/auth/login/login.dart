@@ -17,67 +17,73 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _loading = false;
 
-Future<void> _login() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() => _loading = true);
+    setState(() => _loading = true);
 
-  try {
-    await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Login successful!")),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login successful!")),
+      );
 
-    // Navigate to HomeScreen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
-    
-  } on FirebaseAuthException catch (e) {
-    String message = "Something went wrong";
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String message = "Something went wrong";
 
-    if (e.code == "user-not-found") {
-      message = "No user found with this email.";
-    } else if (e.code == "wrong-password") {
-      message = "Incorrect password.";
-    } else if (e.code == "invalid-email") {
-      message = "Email format is invalid.";
+      if (e.code == "user-not-found") {
+        message = "No user found with this email.";
+      } else if (e.code == "wrong-password") {
+        message = "Incorrect password.";
+      } else if (e.code == "invalid-email") {
+        message = "Email format is invalid.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      setState(() => _loading = false);
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  } finally {
-    setState(() => _loading = false);
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData.light(),
-      child: Scaffold(
-        backgroundColor: const Color.fromARGB(156, 1, 105, 196),
-        body: Center(
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
           child: SingleChildScrollView(
             child: Container(
-              width: 360,
-              padding: const EdgeInsets.all(20),
+              width: 380,
+              padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 12,
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
                     spreadRadius: 2,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -86,18 +92,40 @@ Future<void> _login() async {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset("assets/images/login.avif", height: 150),
-                    const Text(
-                      "Login",
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    Image.asset(
+                      "assets/images/login.png",
+                      height: 140,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Welcome Back",
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D47A1),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Sign in to continue",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     // Email Field
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
                         labelText: "Email",
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -109,14 +137,19 @@ Future<void> _login() async {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     // Password Field
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: "Password",
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -128,28 +161,48 @@ Future<void> _login() async {
                         return null;
                       },
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text("Forgot Password?"),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {},
+                        child: const Text(
+                          "Forgot Password?",
+                          style: TextStyle(color: Color(0xFF1976D2)),
                         ),
-                      ],
-                    ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _login,
-                        child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text("Login"),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D47A1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _loading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        const Text("Don't have an account? "),
                         TextButton(
                           onPressed: () {
                             Navigator.push(
@@ -159,7 +212,13 @@ Future<void> _login() async {
                               ),
                             );
                           },
-                          child: const Text("Sign Up"),
+                          child: const Text(
+                            "Sign Up",
+                            style: TextStyle(
+                              color: Color(0xFF0D47A1),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
