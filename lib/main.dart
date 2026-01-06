@@ -7,7 +7,6 @@ import 'package:khmerlearning/Components/home/home.dart';
 import 'package:khmerlearning/Components/home/sub_nav/profile_screen.dart';
 import 'package:khmerlearning/Components/welcome/welcome.dart'; // <- import WelcomeScreen
 import 'firebase_options.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -15,7 +14,6 @@ void main() async {
   );
   runApp(const MyApp());
 }
-
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 class MyApp extends StatelessWidget {

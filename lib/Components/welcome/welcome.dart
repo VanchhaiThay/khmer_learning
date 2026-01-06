@@ -65,7 +65,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       body: Center(
         child: Container(
           width: 580,
-          height: 760,
+          height: 800,
           color: Colors.white,
           child: Column(
             children: [
