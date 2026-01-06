@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:khmerlearning/Components/home/sub_nav/class_component/drawer_func/activity.dart';
 import 'package:khmerlearning/Components/home/sub_nav/class_component/drawer_func/assignments_screen.dart';
 import 'package:khmerlearning/Components/home/sub_nav/class_component/drawer_func/sub_course/courses_screen.dart';
 import 'package:khmerlearning/Components/home/sub_nav/class_component/drawer_func/notes_screen.dart';
@@ -75,24 +76,29 @@ class _ClassScreenState extends State<ClassScreen> {
               onTap: () => changeScreen(0),
             ),
             ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: const Text("Activities"),
+              onTap: () => changeScreen(1),
+            ),
+            ListTile(
               leading: const Icon(Icons.assignment),
               title: const Text("Assignments"),
-              onTap: () => changeScreen(1),
+              onTap: () => changeScreen(2),
             ),
             ListTile(
               leading: const Icon(Icons.note),
               title: const Text("Notes"),
-              onTap: () => changeScreen(2),
+              onTap: () => changeScreen(3),
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
               title: const Text("Schedule"),
-              onTap: () => changeScreen(3),
+              onTap: () => changeScreen(4),
             ),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text("Other"),
-              onTap: () => changeScreen(4),
+              onTap: () => changeScreen(5),
             ),
 
             const Divider(),
@@ -109,12 +115,12 @@ class _ClassScreenState extends State<ClassScreen> {
           ],
         ),
       ),
-
       // ================= BODY =================
       body: IndexedStack(
         index: selectedIndex,
         children: const [
           CoursesView(),
+          Activityview(),
           AssignmentsView(),
           NotesView(),
           ScheduleView(),

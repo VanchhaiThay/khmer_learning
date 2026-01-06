@@ -18,6 +18,7 @@ class MessageScreen extends StatefulWidget {
 
 class _MessageScreenState extends State<MessageScreen> {
   final currentUser = FirebaseAuth.instance.currentUser!;
+  String searchQuery = "";
 
   void _showAddFriendDialog() {
     showDialog(
@@ -125,6 +126,14 @@ class _MessageScreenState extends State<MessageScreen> {
       }
 
       allChats.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+
+      // Filter by search query
+      if (searchQuery.isNotEmpty) {
+        allChats = allChats
+            .where((chat) => chat['name'].toString().toLowerCase().contains(searchQuery.toLowerCase()))
+            .toList();
+      }
+
       yield allChats;
     }
   }
@@ -139,6 +148,8 @@ class _MessageScreenState extends State<MessageScreen> {
     final cardColor = isDarkMode ? Colors.grey.shade900 : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black87;
     final subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final searchBackground = isDarkMode ? Colors.grey.shade800 : Colors.white;
+    final searchTextColor = isDarkMode ? Colors.white : Colors.black87;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -162,13 +173,11 @@ class _MessageScreenState extends State<MessageScreen> {
                     backgroundImage: NetworkImage(
                         "https://api.dicebear.com/7.x/fun-emoji/png?seed=$userId"),
                   ),
-                  const SizedBox(height: 12),
                   Text(
                     userName,
                     style: const TextStyle(
                         color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -220,59 +229,101 @@ class _MessageScreenState extends State<MessageScreen> {
           ],
         ),
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: combinedChatStream(userId),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          // Search Bar
+// Place this inside the body Column above the Expanded ListView
+Padding(
+  padding: const EdgeInsets.all(12.0),
+  child: Container(
+    decoration: BoxDecoration(
+      color: isDarkMode ? Colors.grey.shade800 : Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        if (!isDarkMode)
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+      ],
+    ),
+    child: TextField(
+      onChanged: (value) {
+        setState(() {
+          searchQuery = value;
+        });
+      },
+      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
+      decoration: InputDecoration(
+        hintText: "Search friends or groups",
+        hintStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54),
+        prefixIcon: Icon(Icons.search, color: isDarkMode ? Colors.white70 : Colors.black54),
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      ),
+    ),
+  ),
+),
 
-          final chats = snapshot.data!;
-          if (chats.isEmpty) {
-            return Center(
-              child: Text(
-                "No chats yet",
-                style: TextStyle(color: subTextColor, fontSize: 16),
-              ),
-            );
-          }
+          // Chat List
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: combinedChatStream(userId),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: chats.length,
-            itemBuilder: (context, index) {
-              final chat = chats[index];
-              return Card(
-                color: cardColor,
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    radius: 26,
-                    backgroundImage: NetworkImage(
-                      chat['type'] == 'friend'
-                          ? "https://api.dicebear.com/7.x/fun-emoji/png?seed=${chat['id']}"
-                          : "https://ui-avatars.com/api/?name=${Uri.encodeComponent(chat['name'])}&background=6c5ce7&color=fff&size=128",
+                final chats = snapshot.data!;
+                if (chats.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No chats yet",
+                      style: TextStyle(color: subTextColor, fontSize: 16),
                     ),
-                  ),
-                  title: Text(chat['name'], style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                  subtitle: Text(chat['lastMessage'], style: TextStyle(color: subTextColor)),
-                  trailing: chat['type'] == 'friend'
-                      ? const Icon(Icons.chat, color: Color(0xff6c5ce7))
-                      : null,
-                  onTap: () {
-                    if (chat['type'] == 'friend') {
-                      _openChat(chat['id'], chat['name']);
-                    } else {
-                      _openGroupChat(chat['id'], chat['name']);
-                    }
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: chats.length,
+                  itemBuilder: (context, index) {
+                    final chat = chats[index];
+                    return Card(
+                      color: cardColor,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          radius: 26,
+                          backgroundImage: NetworkImage(
+                            chat['type'] == 'friend'
+                                ? "https://api.dicebear.com/7.x/fun-emoji/png?seed=${chat['id']}"
+                                : "https://ui-avatars.com/api/?name=${Uri.encodeComponent(chat['name'])}&background=6c5ce7&color=fff&size=128",
+                          ),
+                        ),
+                        title: Text(chat['name'], style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                        subtitle: Text(chat['lastMessage'], style: TextStyle(color: subTextColor)),
+                        trailing: chat['type'] == 'friend'
+                            ? const Icon(Icons.chat, color: Color(0xff6c5ce7))
+                            : null,
+                        onTap: () {
+                          if (chat['type'] == 'friend') {
+                            _openChat(chat['id'], chat['name']);
+                          } else {
+                            _openGroupChat(chat['id'], chat['name']);
+                          }
+                        },
+                      ),
+                    );
                   },
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

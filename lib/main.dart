@@ -13,11 +13,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   runApp(const MyApp());
 }
 
-// Global theme notifier
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 class MyApp extends StatelessWidget {

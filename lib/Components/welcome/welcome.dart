@@ -3,14 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:khmerlearning/Components/survey/survey.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+  final double imageWidth;
+  final double imageHeight;
+
+  const WelcomeScreen({
+    super.key,
+    this.imageWidth = 230,
+    this.imageHeight = 250,
+  });
+
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
+
 class _WelcomeScreenState extends State<WelcomeScreen> {
   late PageController _pageController;
   late Timer _timer;
-
   int currentIndex = 0;
 
   final List<String> images = [
@@ -52,9 +60,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const double height = 250;
-    const double width = 230;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
@@ -66,22 +71,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             children: [
               // HEADER
               Container(
-                height: 110,
+                height: 95,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.green,
                   borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(150),
-                    bottomRight: Radius.circular(150),
+                    bottomLeft: Radius.elliptical(200, 80),
+                    bottomRight: Radius.elliptical(200, 80),
                   ),
                 ),
               ),
-
               const SizedBox(height: 60),
-
               // AUTO SCROLL IMAGES
               SizedBox(
-                height: height,
+                height: widget.imageHeight,
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: images.length,
@@ -94,8 +97,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       builder: (context, child) {
                         double scale = 1.0;
                         if (_pageController.position.haveDimensions) {
-                          scale =
-                              (_pageController.page! - index).abs();
+                          scale = (_pageController.page! - index).abs();
                           scale = (1 - scale * 0.25).clamp(0.8, 1.0);
                         }
 
@@ -106,8 +108,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               borderRadius: BorderRadius.circular(20),
                               child: Image.asset(
                                 images[index],
-                                height: height,
-                                width: width,
+                                height: widget.imageHeight,
+                                width: widget.imageWidth,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -128,8 +130,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 5),
-                    width: currentIndex == index ? 14 : 10,
-                    height: currentIndex == index ? 14 : 10,
+                    width: 10,
+                    height: 10,
                     decoration: BoxDecoration(
                       color: currentIndex == index
                           ? Colors.green
@@ -164,8 +166,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xffd7b167),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                 ),
                 onPressed: () {
                   Navigator.push(

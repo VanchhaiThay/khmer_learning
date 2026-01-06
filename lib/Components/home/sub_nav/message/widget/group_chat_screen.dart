@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart'; // for formatting timestamps
+import 'package:intl/intl.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
@@ -43,6 +43,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     super.dispose();
   }
 
+  // ------------------- MESSAGE FUNCTIONS -------------------
   void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -69,7 +70,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (uid == currentUser.uid) {
       return {'name': currentUser.displayName ?? "Me", 'avatar': ""};
     }
-
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
@@ -77,16 +77,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         final first = data['first_name'] ?? '';
         final last = data['last_name'] ?? '';
         return {
-          'name': "$first $last".trim().isNotEmpty ? "$first $last".trim() : "Unknown",
+          'name': "$first $last".trim().isNotEmpty ? "$first $last" : "Unknown",
           'avatar': "https://api.dicebear.com/7.x/fun-emoji/png?seed=$uid",
         };
       }
     } catch (_) {}
-
-    return {
-      'name': 'Unknown',
-      'avatar': "https://api.dicebear.com/7.x/fun-emoji/png?seed=unknown",
-    };
+    return {'name': 'Unknown', 'avatar': "https://api.dicebear.com/7.x/fun-emoji/png?seed=unknown"};
   }
 
   void _deleteMessage(String messageId) async {
@@ -163,7 +159,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return DateFormat('hh:mm a').format(date);
   }
 
-  /// ---------------- SHOW GROUP MEMBERS ----------------
+  // ------------------- GROUP MEMBERS -------------------
   Future<void> _showGroupMembers() async {
     try {
       final groupDoc = await FirebaseFirestore.instance
@@ -234,12 +230,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     }
   }
 
-  /// ---------------- ADD MEMBERS ----------------
   Future<void> _addGroupMembers() async {
     try {
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(widget.groupId)
+          .get();
+      final currentMembers = List<String>.from(groupDoc['members'] ?? []);
+
       final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
       final allUsers = usersSnapshot.docs
-          .where((doc) => doc.id != currentUser.uid)
+          .where((doc) => !currentMembers.contains(doc.id))
           .map((doc) {
         final data = doc.data();
         final first = data['first_name'] ?? '';
@@ -250,12 +251,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           'avatar': "https://api.dicebear.com/7.x/fun-emoji/png?seed=${doc.id}",
         };
       }).toList();
-
-      final groupDoc = await FirebaseFirestore.instance
-          .collection('groups')
-          .doc(widget.groupId)
-          .get();
-      final currentMembers = List<String>.from(groupDoc['members'] ?? []);
 
       List<String> selectedUids = [];
 
@@ -271,62 +266,71 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 itemCount: allUsers.length,
                 itemBuilder: (context, index) {
                   final user = allUsers[index];
-                  final isAlreadyMember = currentMembers.contains(user['uid']);
                   final isSelected = selectedUids.contains(user['uid']);
-
-return ListTile(
-  leading: CircleAvatar(
-    backgroundImage: (user['avatar'] ?? "").toString().isNotEmpty
-        ? NetworkImage(user['avatar']!.toString())
-        : null,
-    child: (user['avatar'] ?? "").toString().isEmpty
-        ? const Icon(Icons.person)
-        : null,
-  ),
-  title: Text(user['name']?.toString() ?? 'Unknown'),
-  trailing: isAlreadyMember
-      ? const Text(
-          "Member",
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        )
-      : Checkbox(
-          value: isSelected,
-          onChanged: (val) {
-            setState(() {
-              final uid = user['uid']?.toString() ?? '';
-              if (uid.isEmpty) return;
-
-              if (val == true) {
-                if (!selectedUids.contains(uid)) selectedUids.add(uid);
-              } else {
-                selectedUids.remove(uid);
-              }
-            });
-          },
-        ),
-);
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: NetworkImage(user['avatar']!),
+                    ),
+                    title: Text(user['name']!),
+                    trailing: Checkbox(
+                      value: isSelected,
+                      onChanged: (val) {
+                        setState(() {
+                          final uid = user['uid']!;
+                          if (val == true) {
+                            selectedUids.add(uid);
+                          } else {
+                            selectedUids.remove(uid);
+                          }
+                        });
+                      },
+                    ),
+                  );
                 },
               ),
             ),
             actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
               TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Cancel")),
-              TextButton(
-                  onPressed: () async {
-                    if (selectedUids.isNotEmpty) {
-                      final updatedMembers = [...currentMembers, ...selectedUids];
+                onPressed: () async {
+                  if (selectedUids.isNotEmpty) {
+                    // 1. Update group members
+                    await FirebaseFirestore.instance
+                        .collection('groups')
+                        .doc(widget.groupId)
+                        .update({
+                      'members': FieldValue.arrayUnion(selectedUids),
+                    });
+
+                    // 2. Add system message for each new member
+                    for (var uid in selectedUids) {
+                      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+                      final userData = userDoc.data();
+                      final first = userData?['first_name'] ?? '';
+                      final last = userData?['last_name'] ?? '';
+                      final fullName = "$first $last".trim().isNotEmpty ? "$first $last" : "Unknown";
+
                       await FirebaseFirestore.instance
                           .collection('groups')
                           .doc(widget.groupId)
-                          .update({'members': updatedMembers});
+                          .collection('messages')
+                          .add({
+                        'text': "$fullName has been added by ${currentUser.displayName ?? "Me"}",
+                        'senderId': 'system',
+                        'timestamp': FieldValue.serverTimestamp(),
+                      });
                     }
-                    Navigator.pop(ctx);
+                  }
+
+                  Navigator.pop(ctx);
+                  if (selectedUids.isNotEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("${selectedUids.length} member(s) added")),
                     );
-                  },
-                  child: const Text("Add")),
+                  }
+                },
+                child: const Text("Add"),
+              ),
             ],
           ),
         ),
@@ -369,12 +373,9 @@ return ListTile(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text("Delete All Messages"),
-                  content: const Text(
-                      "Are you sure you want to delete all messages?"),
+                  content: const Text("Are you sure you want to delete all messages?"),
                   actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text("Cancel")),
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
                     TextButton(
                         onPressed: () {
                           _deleteAllMessages();
@@ -401,9 +402,7 @@ return ListTile(
                       .orderBy('timestamp')
                       .snapshots(),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
                     final messages = snapshot.data!.docs;
 
@@ -414,6 +413,28 @@ return ListTile(
                       itemBuilder: (context, index) {
                         final msg = messages[index];
                         final msgData = msg.data() as Map<String, dynamic>;
+
+                        // Check for system message
+                        final isSystemMessage = msgData['senderId'] == 'system';
+                        if (isSystemMessage) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  msgData['text'],
+                                  style: const TextStyle(
+                                      fontSize: 12, fontStyle: FontStyle.italic, color: Colors.black87),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
                         final isMe = msgData['senderId'] == currentUser.uid;
 
                         return FutureBuilder<Map<String, String>>(
@@ -425,7 +446,6 @@ return ListTile(
                             final bubbleColor = isMe
                                 ? primary
                                 : (isDark ? Colors.grey[800] : Colors.grey[300]);
-
                             final textColor =
                                 isMe ? Colors.white : theme.textTheme.bodyMedium!.color!;
 
@@ -463,9 +483,8 @@ return ListTile(
                                 padding: const EdgeInsets.symmetric(vertical: 4),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: isMe
-                                      ? MainAxisAlignment.end
-                                      : MainAxisAlignment.start,
+                                  mainAxisAlignment:
+                                      isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                                   children: [
                                     if (!isMe)
                                       Padding(
@@ -544,7 +563,7 @@ return ListTile(
                 ),
               ),
 
-              // INPUT BAR
+              // MESSAGE INPUT
               Material(
                 color: theme.scaffoldBackgroundColor,
                 child: Padding(
