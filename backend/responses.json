@@ -1,0 +1,70 @@
+{
+  "response": [
+    {
+      "tag": "greeting",
+      "patterns": ["Hi", "How are you", "Is anyone there?", "Hello", "Good day", "Whats up"],
+      "responses": ["Hello!", "Good to see you again!", "Hi there, how can I help?"],
+      "context_set": ""
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["Cya", "See you later", "Goodbye", "I am Leaving", "Have a Good day"],
+      "responses": ["Sad to see you go :(", "Talk to you later", "Goodbye!"],
+      "context_set": ""
+    },
+    {
+      "tag": "age",
+      "patterns": ["how old", "how old is Alice", "what is your age", "how old are you", "age"],
+      "responses": ["I am 18 years old!", "18 years young!"],
+      "context_set": ""
+    },
+    {
+      "tag": "name",
+      "patterns": ["name","what is your name?", "what should I call you", "whats your name?", "who are you"],
+      "responses": ["You can call me Alice.", "I'm Alice!", "I'm your support Alice."],
+      "context_set": ""
+    },
+    {
+      "tag": "thanks",
+      "patterns": ["Thanks", "Thank you", "Thanks a lot", "Thank you very much"],
+      "responses": ["You're welcome!", "No problem!", "Happy to help!"],
+      "context_set": ""
+    },
+    {
+      "tag": "khmer_letters",
+      "patterns": ["Teach me Khmer letters", "How to write Khmer letters", "Khmer alphabet", "Khmer letters"],
+      "responses": [
+        "Khmer has 33 consonants and 23 vowels. Example: ក (ka), ខ (kha), គ (ko).",
+        "You can practice Khmer letters by tracing them in the app!"
+      ],
+      "context_set": ""
+    },
+    {
+      "tag": "khmer_numbers",
+      "patterns": ["Teach me numbers in Khmer", "Khmer numbers", "Count in Khmer", "1 to 10 in Khmer"],
+      "responses": [
+        "1-10 in Khmer: ១(1), ២(2), ៣(3), ៤(4), ៥(5), ៦(6), ៧(7), ៨(8), ៩(9), ១០(10).",
+        "You can practice counting in Khmer using the app's number lessons."
+      ],
+      "context_set": ""
+    },
+    {
+      "tag": "khmer_phrases",
+      "patterns": ["Common phrases in Khmer", "Learn Khmer phrases", "How to say hello in Khmer", "Useful Khmer sentences"],
+      "responses": [
+        "Hello in Khmer: សួស្តី (Sous-dey), Thank you: អរគុណ (Arkun).",
+        "Practice daily greetings in Khmer to remember them quickly!"
+      ],
+      "context_set": ""
+    },
+    {
+      "tag": "app_features",
+      "patterns": ["What can I do in the app?", "App features", "How to use the app","How to use this app", "Learning options"],
+      "responses": [
+        "You can learn Khmer letters, English, numbers, common phrases, and more subject in this app.",
+        "The app also tracks your progress and gives rewards for daily practice!"
+      ],
+      "context_set": ""
+    }
+  ]
+}

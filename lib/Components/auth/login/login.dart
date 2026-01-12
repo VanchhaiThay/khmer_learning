@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:khmerlearning/Components/auth/signup/signup.dart';
-import 'package:khmerlearning/Components/home/home.dart';
+import 'package:khmerlearning/Components/home/homescreen/home.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
